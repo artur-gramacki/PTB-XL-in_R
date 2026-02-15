@@ -173,3 +173,4 @@ txt <- paste("ECG ID: ", ecg_id, ", sampling rate: ", sampling_rate, "Hz",
     				 ", diag: ", Y$diagnostic_superclass[row], sep = "")
 text(1,1, txt, cex = 1.5, col = "blue")
 
+
