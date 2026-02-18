@@ -32,9 +32,9 @@ library("EGM")
 library("jsonlite")
 
 # //////////////////////////////////////////////////////////////////////////////
-# Params of the repo ----
+# Params fo the repo ----
 # //////////////////////////////////////////////////////////////////////////////
-sampling_rate <- 500
+sampling_rate <- 100
 number_of_recors <- 21799
 ecg_length <- 10
 lead_12 <- c("I", "II", "III", "AVR", "AVL", "AVF", "V1", "V2", "V3", "V4", "V5", "V6" )
@@ -84,6 +84,10 @@ for (i in 1:nrow(Y)) {
 	Y$diagnostic_superclass[i] <- tmp
 }
 
+# uncomment if necessary
+#save(Y, file = "Y_with_diagnostic_superclass.RData")
+#load("Y_with_diagnostic_superclass.RData")
+
 # //////////////////////////////////////////////////////////////////////////////
 # Load raw signal data ----
 # //////////////////////////////////////////////////////////////////////////////
@@ -100,6 +104,7 @@ dimnames(X) <- list(
 	seq(1:number_of_recors)
 )
 
+# This piece of code takes quite a long time to execute (tens of minutes on a typical modern PC)
 for (i in 1:nrow(Y)) {
 	if (i %% 100 == 0) cat(i, "/", nrow(Y), "\n")
 	if (sampling_rate == 500) {
@@ -125,6 +130,7 @@ if (sampling_rate == 100) {
 	save(X, file = "ECG_records100.RData")
 } 		
 
+# uncomment if necessary
 # load("ECG_records100.RData")
 # load("ECG_records500.RData")
 
@@ -153,7 +159,7 @@ head(X[, , number_of_recors], 10)
 tail(X[, , number_of_recors], 10)
 
 # //////////////////////////////////////////////////////////////////////////////
-# ECG sample plot ----
+# ECG sample plots ----
 # //////////////////////////////////////////////////////////////////////////////
 from <- start * sampling_rate
 to <- stop * sampling_rate
@@ -179,4 +185,3 @@ plot(1, type = "n", xaxt = "n", yaxt = "n", xlab = "", ylab = "", bty = "n")
 txt <- paste("ECG ID: ", ecg_id, ", sampling rate: ", sampling_rate, "Hz", 
     				 ", diag: ", Y$diagnostic_superclass[row], sep = "")
 text(1,1, txt, cex = 1.5, col = "blue")
-
