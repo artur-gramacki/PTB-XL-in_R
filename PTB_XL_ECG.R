@@ -186,6 +186,11 @@ bf.low = fout$bf.low
 bf.high = fout$bf.high 
 bf.bandpass = fout$bf.bandpass
 
+freqz(bf.notch, Fs = sampling_rate)
+freqz(bf.low, Fs = sampling_rate)
+freqz(bf.high, Fs = sampling_rate)
+freqz(bf.bandpass, Fs = sampling_rate)
+
 if (filtering) {
   XX <- X[range, 1:12, row]
   #X_filter <- apply(XX, 2, function(x) signal::filtfilt(bf.high, x))
