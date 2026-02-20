@@ -25,16 +25,19 @@ pkgs <- c("EGM", "jsonlite")
 
 to_install = !pkgs %in% installed.packages()
 if(any(to_install)) {
-	install.packages(pkgs[to_install])
+  install.packages(pkgs[to_install])
 }
 
 library("EGM")
 library("jsonlite")
+library("signal")
+
+source("funs.R")
 
 # //////////////////////////////////////////////////////////////////////////////
 # Params fo the repo ----
 # //////////////////////////////////////////////////////////////////////////////
-sampling_rate <- 100
+sampling_rate <- 500
 number_of_recors <- 21799
 ecg_length <- 10
 lead_12 <- c("I", "II", "III", "AVR", "AVL", "AVF", "V1", "V2", "V3", "V4", "V5", "V6" )
@@ -47,7 +50,10 @@ start <- 0
 stop <- 10
 
 # Which ECG to display
-ecg_id <- 146
+ecg_id <- 1
+
+# to filter or not(see calling filters_coeff() function below)
+filtering = TRUE
 
 # //////////////////////////////////////////////////////////////////////////////
 # Load and convert annotation data ----
@@ -65,28 +71,28 @@ agg_df <- agg_df[which(agg_df$diagnostic == 1),]
 # Apply diagnostic superclass ----
 # //////////////////////////////////////////////////////////////////////////////
 for (i in 1:nrow(Y)) {
-	if (i %% 1000 == 0) cat(i, "/", nrow(Y), "\n")
-	y <- Y$scp_codes[i]
-	y_json <- gsub("'", "\"", y)
-	obj <- fromJSON(y_json)
-	tmp <- c()
-	for (j in 1:length(obj)) {
-		obj_name <- names(obj[j])
-		idx <- which(agg_df$index == obj_name)
-		if (length(idx) > 0) {
-			dc <- agg_df$diagnostic_class[idx]
-			tmp <- c(tmp, dc)
-		}
-	}
-	tmp <- unique(tmp)
-	tmp <- sort(tmp)
-	tmp <- paste(tmp, collapse = " | ", sep = "")
-	Y$diagnostic_superclass[i] <- tmp
+  if (i %% 1000 == 0) cat(i, "/", nrow(Y), "\n")
+  y <- Y$scp_codes[i]
+  y_json <- gsub("'", "\"", y)
+  obj <- fromJSON(y_json)
+  tmp <- c()
+  for (j in 1:length(obj)) {
+    obj_name <- names(obj[j])
+    idx <- which(agg_df$index == obj_name)
+    if (length(idx) > 0) {
+      dc <- agg_df$diagnostic_class[idx]
+      tmp <- c(tmp, dc)
+    }
+  }
+  tmp <- unique(tmp)
+  tmp <- sort(tmp)
+  tmp <- paste(tmp, collapse = " | ", sep = "")
+  Y$diagnostic_superclass[i] <- tmp
 }
 
 # uncomment if necessary
-#save(Y, file = "Y_with_diagnostic_superclass.RData")
-#load("Y_with_diagnostic_superclass.RData")
+# save(Y, file = "Y_with_diagnostic_superclass.RData")
+# load("Y_with_diagnostic_superclass.RData")
 
 # //////////////////////////////////////////////////////////////////////////////
 # Load raw signal data ----
@@ -94,40 +100,41 @@ for (i in 1:nrow(Y)) {
 # dim = c(rows, columns, layers, ...)
 # data is stored colum-wise (column-major order)
 X <- array(
-	data = rep(NA, nrow(Y)), 
-	dim = c(sampling_rate * ecg_length, 12, nrow(Y))
+  data = rep(NA, nrow(Y)), 
+  dim = c(sampling_rate * ecg_length, 12, nrow(Y))
 )
 
 dimnames(X) <- list(
-	c(formatC(seq(0, ecg_length, length.out = sampling_rate * ecg_length), format = "f", digits = 3)),  
-	seq(1:12), 
-	seq(1:number_of_recors)
+  c(formatC(seq(0, ecg_length, length.out = sampling_rate * ecg_length), format = "f", digits = 3)),  
+  seq(1:12), 
+  seq(1:number_of_recors)
 )
 
 # This piece of code takes quite a long time to execute (tens of minutes on a typical modern PC)
 for (i in 1:nrow(Y)) {
-	if (i %% 100 == 0) cat(i, "/", nrow(Y), "\n")
-	if (sampling_rate == 500) {
-		file <- Y$filename_hr[i]
-	} 	
-	if (sampling_rate == 100) {
-		file <- Y$filename_lr[i]
-	} 	
-	out <- read_wfdb(
-		record = basename(file),
-		record_dir = dirname(file), 
-		units = "physical"
-	)
-	X[, , i]	<- as.matrix(out$signal[,2:13])
-	dimnames(X)[[2]] <- out$header$lead
-	dimnames(X)[[3]][[i]] <- basename(file)
+  if (i %% 100 == 0) cat(i, "/", nrow(Y), "\n")
+  if (sampling_rate == 500) {
+    file <- Y$filename_hr[i]
+  } 	
+  if (sampling_rate == 100) {
+    file <- Y$filename_lr[i]
+  } 	
+  out <- read_wfdb(
+    record = basename(file),
+    record_dir = dirname(file), 
+    units = "physical"
+  )
+  X[, , i]	<- as.matrix(out$signal[,2:13])
+  dimnames(X)[[2]] <- out$header$lead
+  dimnames(X)[[3]][[i]] <- basename(file)
 }
 
 if (sampling_rate == 500) {
-	save(X, file = "ECG_records500.RData")
+  save(X, file = "ECG_records500.RData")
 } 	
+
 if (sampling_rate == 100) {
-	save(X, file = "ECG_records100.RData")
+  save(X, file = "ECG_records100.RData")
 } 		
 
 # uncomment if necessary
@@ -166,22 +173,60 @@ to <- stop * sampling_rate
 range <- seq(from, to)
 row <- which(Y$ecg_id == ecg_id)
 
+fout <- filters_coeff(
+  fs = sampling_rate, 
+  notch = c(49, 51), 
+  lowpass = 40, 
+  highpass = 1, 
+  low_cut  = 0.5,  
+  high_cut = 40)
+
+bf.notch = fout$bf.notch
+bf.low = fout$bf.low
+bf.high = fout$bf.high 
+bf.bandpass = fout$bf.bandpass
+
+if (filtering) {
+  XX <- X[range, 1:12, row]
+  #X_filter <- apply(XX, 2, function(x) signal::filtfilt(bf.high, x))
+  #_filter <- apply(X_filter, 2, function(x) signal::filtfilt(bf.low, x))
+  X_filter <- apply(XX, 2, function(x) signal::filtfilt(bf.bandpass, x))
+  X_filter <- apply(X_filter, 2, function(x) signal::filtfilt(bf.notch, x))
+  # Savitzky-Golay smoothing filter 
+  #X_filter <- apply(XX, 2, function(x) sgolayfilt(x, p = 3, n = 11))
+  XX <- X_filter
+} else {
+  XX <- X[range, 1:12, row]
+}
+
 par(mfrow = c(13, 1), pty = "m")
 # mai: c(bottom, left, top, right)
 par(mai = c(0.05, 0.7, 0.1, 0.2))
+
 for (j in 1:12) {
-	plot(X[range, j, row], type = "l", ylab = lead_12[j], las = 1, xlab = "", xaxt = "n")
+  plot(XX[, j], type = "l", ylab = lead_12[j], las = 1, xlab = "", xaxt = "n")
+  abline(h = 0, col = "grey") 
 }
 
-lab <- seq(from = dimnames(X)[[1]][from + 1], to = dimnames(X)[[1]][to], length.out = 11)
+lab <- seq(start, stop, length.out = 11)
 axis(
-	side = 1, las = 1, cex.axis = 0.9,
-	at = seq(0, length(range), length.out = 11),
-	labels = c(formatC(lab, format = "f", digits = 2))
+  side = 1, las = 1, cex.axis = 0.9,
+  at = seq(0, length(range), length.out = 11),
+  labels = c(formatC(lab, format = "f", digits = 2))
 )
 
 par(mai = c(0.05, 0.7, 0.2, 0.2))
 plot(1, type = "n", xaxt = "n", yaxt = "n", xlab = "", ylab = "", bty = "n")
 txt <- paste("ECG ID: ", ecg_id, ", sampling rate: ", sampling_rate, "Hz", 
-    				 ", diag: ", Y$diagnostic_superclass[row], sep = "")
+             ", diag: ", Y$diagnostic_superclass[row], sep = "")
 text(1,1, txt, cex = 1.5, col = "blue")
+
+# z-score
+XX_centered <- apply(XX, 2, function(x) scale(x, center = TRUE, scale = TRUE))
+apply(XX_centered, 2, function(x) mean(x))
+apply(XX_centered, 2, function(x) sd(x))
+
+# MinMax (0-1)
+XX_minmax <- apply(XX, 2, function(x) minmax(x))
+apply(XX_minmax, 2, function(x) min(x))
+apply(XX_minmax, 2, function(x) max(x))
