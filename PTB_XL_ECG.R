@@ -21,7 +21,7 @@
 # available at https://physionet.org/content/ptb-xl/1.0.3/
 #
 
-pkgs <- c("EGM", "jsonlite")
+pkgs <- c("EGM", "jsonlite", "signal")
 
 to_install = !pkgs %in% installed.packages()
 if(any(to_install)) {
