@@ -207,6 +207,7 @@ if (filtering) {
 par(mfrow = c(13, 1), pty = "m")
 # mai: c(bottom, left, top, right)
 par(mai = c(0.05, 0.7, 0.1, 0.2))
+par(xaxs = "r", yaxs = "r")
 
 for (j in 1:12) {
   plot(XX[, j], type = "l", ylab = lead_12[j], las = 1, xlab = "", xaxt = "n")
