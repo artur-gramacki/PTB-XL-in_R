@@ -38,7 +38,7 @@ source("funs.R")
 # Params fo the repo ----
 # //////////////////////////////////////////////////////////////////////////////
 sampling_rate <- 500
-number_of_recors <- 21799
+number_of_records <- 21799
 ecg_length <- 10
 lead_12 <- c("I", "II", "III", "AVR", "AVL", "AVF", "V1", "V2", "V3", "V4", "V5", "V6" )
 
@@ -107,7 +107,7 @@ X <- array(
 dimnames(X) <- list(
   c(formatC(seq(0, ecg_length, length.out = sampling_rate * ecg_length), format = "f", digits = 3)),  
   seq(1:12), 
-  seq(1:number_of_recors)
+  seq(1:number_of_records)
 )
 
 # This piece of code takes quite a long time to execute (tens of minutes on a typical modern PC)
@@ -162,8 +162,8 @@ y_test = Y[rows_test, ]$diagnostic_superclass
 head(X[, , 1], 10)
 tail(X[, , 1], 10)
 
-head(X[, , number_of_recors], 10)
-tail(X[, , number_of_recors], 10)
+head(X[, , number_of_records], 10)
+tail(X[, , number_of_records], 10)
 
 # //////////////////////////////////////////////////////////////////////////////
 # ECG sample plots ----
