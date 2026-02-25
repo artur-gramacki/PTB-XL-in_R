@@ -211,7 +211,11 @@ par(xaxs = "r", yaxs = "r")
 
 for (j in 1:12) {
   plot(XX[, j], type = "l", ylab = lead_12[j], las = 1, xlab = "", xaxt = "n")
-  abline(h = 0, col = "grey") 
+  # abline(h = 0, col = "grey") 
+  # Standard ECG paper. 1 square: 0.2sec x 0.5mV
+  abline(v = seq(from, to, by = 0.2 * sampling_rate), col = "lightgray")
+  abline(h = seq(-100, 100, by = 0.5), col = "lightgray")
+  lines(XX[, j], type = "l")
 }
 
 lab <- seq(start, stop, length.out = 11)
