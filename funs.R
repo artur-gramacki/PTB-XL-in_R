@@ -15,37 +15,35 @@
 #  http://www.r-project.org/Licenses/
 
 # ///////////////////////////////////////////////////////////////////////////////////////////
-filters_coeff <- function(
-    fs = 256, 
-    notch = c(49, 51), 
-    lowpass = 30, 
-    highpass = 1,
-    low_cut  = 0.5,
-    high_cut = 40) {
-  # https://openbci.com/forum/index.php?p=/discussion/193/50hz-notch-filter-coefficients
-
-  ## 50 Hz notch filter
-  bf.notch <- butter(2, notch / (fs / 2), "stop")
-  freqz(bf.notch)
-
+filters.coeff <- function (
+    fs = 256,
+    notch = c(49, 51), notch.order = 2,
+    lowpass = 30, lowpass.order = 4,
+    highpass = 1, highpass.order = 4,
+    bandpass = c(0.5, 40), bandpass.order = 4,
+    bandstop = c(0.5, 40), bandstop.order = 4)
+{
+  ## Notch filter
+  notch <- butter(notch.order, notch / (fs / 2), "stop")
+  
   # Low pass IIR Butterworth, cutoff at 'lowpass' Hz
-  bf.low <- butter(4, lowpass / (fs / 2), "low")
-  freqz(bf.low)
-
+  low <- butter(lowpass.order, lowpass / (fs / 2), "low")
   
   # High pass IIR Butterwoth, cutoff at 'highpass' Hz
-  bf.high <- butter(4, highpass / (fs / 2), "high")
-  freqz(bf.high)
+  high <- butter(highpass.order, highpass / (fs / 2), "high")
   
   # Bandpass filter IIR Butterworth
-  bf.bandpass <- butter(4, c(low_cut, high_cut) / (fs / 2), type = "pass")
-
+  bandpass <- butter(bandpass.order, bandpass / (fs / 2), type = "pass")
+  
+  # Bandstop filter IIR Butterworth
+  bandstop <- butter(bandstop.order, bandstop / (fs / 2), type = "stop")
   
   list(
-    bf.notch = bf.notch, 
-    bf.low = bf.low, 
-    bf.high = bf.high,
-    bf.bandpass = bf.bandpass)
+    notch = notch,
+    low = low,
+    high = high,
+    bandpass = bandpass,
+    bandstop = bandstop)
 }
 
 # ///////////////////////////////////////////////////////////////////////////////////////////

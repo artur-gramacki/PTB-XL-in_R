@@ -173,30 +173,30 @@ to <- stop * sampling_rate
 range <- seq(from, to)
 row <- which(Y$ecg_id == ecg_id)
 
-fout <- filters_coeff(
+fout <- filters.coeff(
   fs = sampling_rate, 
   notch = c(49, 51), 
   lowpass = 40, 
   highpass = 1, 
-  low_cut  = 0.5,  
-  high_cut = 40)
+  bandpass  = c(0.5, 40)
+)
 
-bf.notch = fout$bf.notch
-bf.low = fout$bf.low
-bf.high = fout$bf.high 
-bf.bandpass = fout$bf.bandpass
+notch = fout$notch
+low = fout$low
+high = fout$high 
+bandpass = fout$bandpass
 
-freqz(bf.notch, Fs = sampling_rate)
-freqz(bf.low, Fs = sampling_rate)
-freqz(bf.high, Fs = sampling_rate)
-freqz(bf.bandpass, Fs = sampling_rate)
+freqz(notch, Fs = sampling_rate)
+freqz(low, Fs = sampling_rate)
+freqz(high, Fs = sampling_rate)
+freqz(bandpass, Fs = sampling_rate)
 
 if (filtering) {
   XX <- X[range, 1:12, row]
   #X_filter <- apply(XX, 2, function(x) signal::filtfilt(bf.high, x))
   #_filter <- apply(X_filter, 2, function(x) signal::filtfilt(bf.low, x))
-  X_filter <- apply(XX, 2, function(x) signal::filtfilt(bf.bandpass, x))
-  X_filter <- apply(X_filter, 2, function(x) signal::filtfilt(bf.notch, x))
+  X_filter <- apply(XX, 2, function(x) signal::filtfilt(bandpass, x))
+  X_filter <- apply(X_filter, 2, function(x) signal::filtfilt(notch, x))
   # Savitzky-Golay smoothing filter 
   #X_filter <- apply(XX, 2, function(x) sgolayfilt(x, p = 3, n = 11))
   XX <- X_filter
@@ -240,3 +240,4 @@ apply(XX_centered, 2, function(x) sd(x))
 XX_minmax <- apply(XX, 2, function(x) minmax(x))
 apply(XX_minmax, 2, function(x) min(x))
 apply(XX_minmax, 2, function(x) max(x))
+
